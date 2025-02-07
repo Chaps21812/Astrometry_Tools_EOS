@@ -15,6 +15,7 @@ from photutils.psf import PSFPhotometry
 import astrometry
 import astroalign as aa
 from astropy.table import QTable
+from astropy.coordinates import Angle
 
 def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, contrast:float=0.5) -> list[float,float]:
     '''
@@ -41,7 +42,7 @@ def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, cont
     stars = np.asarray([[x, y] for x, y in zip(phot['x_fit'], phot['y_fit'])])
     return stars
 
-def match_to_catalogue(extracted_stars, ra_hint:float=0, dec_hint:float=0, rad_hint:float=0, scales:set={4, 5} ):
+def match_to_catalogue(extracted_stars, header=None):
     '''
     Matches a list of stars to a skyfield, allowing for an astrometric fit.
 
@@ -53,15 +54,22 @@ def match_to_catalogue(extracted_stars, ra_hint:float=0, dec_hint:float=0, rad_h
     '''
     solver = astrometry.Solver(
         astrometry.series_5200.index_files(
-            cache_directory= '/mnt/c/Documents and Settings/david.chaparro/Documents/Astrometry/portal.nersc.gov/project/cosmo/temp/dstn/index-5200/LITE',
-            scales = scales,
+            cache_directory= '/mnt/c/Users/david.chaparro/My Documents/Astrometry/astrometry_cache/portal.nersc.gov/project/cosmo/temp/dstn/index-5200/LITE/5200',
+            scales = {4, 5},
         )
     )
+
+    if header is not None:
+        ra_hint = header["CRVAL1"]
+        dec_hint = header["CRVAL2"]
+        hint = PositionHint(float(ra_hint),float(dec_hint),float(0))
+    else:
+        hint=None
 
     solution = solver.solve(
         stars=extracted_stars,
         size_hint=None,
-        position_hint=PositionHint(ra_hint,dec_hint,rad_hint),
+        position_hint=hint,
         solution_parameters=astrometry.SolutionParameters(),
     )
     if solution.has_match():
@@ -135,14 +143,6 @@ if __name__ == "__main__":
     star_locations = star_trak.detect_stars(data, detection_threshold=0.99, contrast=.25)
     star_x = [lox[0] for lox in star_locations]
     star_y = [lox[1] for lox in star_locations]
-
-    # Visualize the data using matplotlib
-    # plt.figure(figsize=(10, 10))
-    # plt.imshow(data, cmap='gray', origin='lower')
-    # plt.plot(star_x, star_y, '.', color='r', alpha = .2)
-    # plt.colorbar()
-    # plt.title('FITS Image: Horsehead Nebula')
-    # plt.show()
 
     scalar = ZScaleInterval(contrast=.25)
     scaled_data = scalar(data)
