@@ -15,9 +15,12 @@ from photutils.psf import PSFPhotometry
 import astrometry
 import astroalign as aa
 from astropy.table import QTable
-from astropy.coordinates import Angle
+from astropy.coordinates import SkyCoord
+from astrometry import Solution
+from typing import Optional, List
+from astropy.wcs import WCS
 
-def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, contrast:float=0.5) -> list[float,float]:
+def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, contrast:float=0.5) -> np.ndarray:
     '''
     Utilizes a integrated gaussian point spread function to identify stars.
 
@@ -42,15 +45,26 @@ def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, cont
     stars = np.asarray([[x, y] for x, y in zip(phot['x_fit'], phot['y_fit'])])
     return stars
 
-def match_to_catalog_scale_search(extracted_stars, header=None):
+def match_to_catalog_scale_search(extracted_stars:list, header:dict=None) -> Optional[Solution]:
+    """
+    Searches all astrometric scales to find starfield matches. Once it finds a solution, it stops the search. 
+
+    Args:
+        extracted_stars (list): List of the extracted stars in an List of (x, y) coordinates of stars.
+        header (str): FITS file header
+
+    Returns:
+        bool: Description of what the function returns.
+    """
     for i in range(6):
         match = match_to_catalogue(extracted_stars, header=header, scales={i+1})
         if match is not None:
             print("Match found at scale: {}".format(i+1))
             return match
+        print("No match found at scale: {}".format(i+1))
     return None
 
-def match_to_catalogue(extracted_stars, header=None, scales:set={4,5}):
+def match_to_catalogue(extracted_stars:list, header:dict=None, scales:set={4,5}):
     '''
     Matches a list of stars to a skyfield, allowing for an astrometric fit.
 
@@ -68,11 +82,34 @@ def match_to_catalogue(extracted_stars, header=None, scales:set={4,5}):
     )
 
     if header is not None:
-        ra_hint = float(header["CRVAL1"])
-        dec_hint = float(header["CRVAL2"])
-        search_radius = float(header["PLTSCALE"])*float(header["XPIXELSZ"])/1000
-        hint = PositionHint(ra_hint,dec_hint,search_radius)
-        size_hint = SizeHint(search_radius*.2, search_radius*2)
+        # Initialize WCS from the header
+        wcs = WCS(header)
+
+        # Example: Convert pixel coordinates to celestial coordinates
+        corner1_pixel = [0, 0]  # Example pixel coordinates (x, y)
+        corner2_pixel = [-1, -1]  # Example pixel coordinates (x, y)
+        corner3_pixel = [0, -1]  # Example pixel coordinates (x, y)
+        ra_dec1 = wcs.pixel_to_world(corner1_pixel[0], corner1_pixel[1])
+        ra_dec2 = wcs.pixel_to_world(corner2_pixel[0], corner2_pixel[1])
+        ra_dec3 = wcs.pixel_to_world(corner3_pixel[0], corner3_pixel[1])
+        r1 = ra_dec1.ra.degree
+        d1 = ra_dec1.dec.degree
+        r2 = ra_dec2.ra.degree 
+        d2 = ra_dec2.dec.degree 
+        r3 = ra_dec3.ra.degree 
+        d3 = ra_dec3.dec.degree 
+        pi_conv = np.pi/180
+        deg_conv = 180/np.pi
+        size_hint = deg_conv*np.arccos(np.sin(d1*pi_conv)*np.sin(d2*pi_conv)+np.cos(d1*pi_conv)*np.cos(d2*pi_conv)*np.cos((r1-r2)*pi_conv))*3600
+        search_radius = 5
+
+        print("Unknown hints")
+        print("radius Hint: {}".format(search_radius))
+        print("size lower Hint: {}".format(size_hint*.1))
+        print("size upper Hint: {}".format(size_hint*2))
+
+        hint = PositionHint(r1,d1,search_radius)
+        size_hint = SizeHint(size_hint*.1, size_hint*2)
     else:
         hint=None
         size_hint = None
@@ -87,7 +124,7 @@ def match_to_catalogue(extracted_stars, header=None, scales:set={4,5}):
         return solution
     return None
 
-def skycoord_to_pixels(astrometric_solution):
+def skycoord_to_pixels(astrometric_solution:Solution) -> List:
     '''
     Converts the solution's sky coordinates to pixel coordinates.
 
@@ -136,7 +173,6 @@ def apply_starmask(s_list, stacked_image, images):
     return processed_images
 
 if __name__ == "__main__":
-    import astrometric_localization as star_trak
     import matplotlib.pyplot as plt
     import numpy as np
 

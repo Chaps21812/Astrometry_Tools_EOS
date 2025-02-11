@@ -7,7 +7,21 @@ from astropy.io.fits.header import Header
 from typing import Optional, Union
 from astrometry import Solution
 
-def view_fits(input_data:str, stars:Optional[list]=None, solution_stars:Solution=None, image:np.ndarray=None, print_header:bool=False, show_image:bool=True) -> tuple[Header,np.ndarray]:
+def view_fits(input_data:str, stars:list=None, solution_stars:Solution=None, image:np.ndarray=None, show_header:bool=False, show_image:bool=True) -> tuple[Header,np.ndarray]:
+    """
+    Plots image of your fits file, along with optional star locations. 
+
+    Args:
+        input_data (str): Input directory for your fits file
+        stars (Optional[list]): Optinal list of stars to be plotted in red against image List (x,y) tuples
+        solution_stars (Optional[list]): Optinal list of known stars to be plotted in green against image List (x,y) tuples
+        image (np.ndarray): Optional image to display instead of default FITS image. 
+        show_header (bool): Bool to toggle showing fits header. 
+        show_image (bool): Bool to turn off showing the image. Can use to just view fits file
+
+    Returns:
+        tuple(np.ndarray, dict): Tuple of your image and your header file
+    """
     
     # Load a sample FITS file from astropy's tutorial data
     # file_path = get_pkg_data_filename(path)
@@ -18,7 +32,7 @@ def view_fits(input_data:str, stars:Optional[list]=None, solution_stars:Solution
     name = input_data.split("/")[-1]
 
     # Display header information
-    if print_header:
+    if show_header:
         print("\nHeader Information:")
         print(repr(header))
 
