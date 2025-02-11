@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import png
 from astropy.stats import SigmaClip
 from photutils.background import Background2D, MedianBackground
-from astrometry import PositionHint
+from astrometry import PositionHint, SizeHint
 from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
 from photutils.psf import PSFPhotometry
@@ -42,7 +42,15 @@ def detect_stars(stacked_frames: np.ndarray, detection_threshold:float=0.5, cont
     stars = np.asarray([[x, y] for x, y in zip(phot['x_fit'], phot['y_fit'])])
     return stars
 
-def match_to_catalogue(extracted_stars, header=None):
+def match_to_catalog_scale_search(extracted_stars, header=None):
+    for i in range(6):
+        match = match_to_catalogue(extracted_stars, header=header, scales={i+1})
+        if match is not None:
+            print("Match found at scale: {}".format(i+1))
+            return match
+    return None
+
+def match_to_catalogue(extracted_stars, header=None, scales:set={4,5}):
     '''
     Matches a list of stars to a skyfield, allowing for an astrometric fit.
 
@@ -54,21 +62,24 @@ def match_to_catalogue(extracted_stars, header=None):
     '''
     solver = astrometry.Solver(
         astrometry.series_5200.index_files(
-            cache_directory= '/mnt/c/Users/david.chaparro/My Documents/Astrometry/astrometry_cache/portal.nersc.gov/project/cosmo/temp/dstn/index-5200/LITE/5200',
-            scales = {4, 5},
+            cache_directory= '/mnt/c/Users/david.chaparro/My Documents/Astrometry/portal.nersc.gov/project/cosmo/temp/dstn/index-5200/LITE',
+            scales = scales,
         )
     )
 
     if header is not None:
-        ra_hint = header["CRVAL1"]
-        dec_hint = header["CRVAL2"]
-        hint = PositionHint(float(ra_hint),float(dec_hint),float(0))
+        ra_hint = float(header["CRVAL1"])
+        dec_hint = float(header["CRVAL2"])
+        search_radius = float(header["PLTSCALE"])*float(header["XPIXELSZ"])/1000
+        hint = PositionHint(ra_hint,dec_hint,search_radius)
+        size_hint = SizeHint(search_radius*.2, search_radius*2)
     else:
         hint=None
+        size_hint = None
 
     solution = solver.solve(
         stars=extracted_stars,
-        size_hint=None,
+        size_hint=size_hint,
         position_hint=hint,
         solution_parameters=astrometry.SolutionParameters(),
     )
@@ -133,19 +144,17 @@ if __name__ == "__main__":
     from astropy.utils.data import get_pkg_data_filename
     from astropy.visualization import ZScaleInterval
     from astropy.wcs import WCS
-
-    path = get_pkg_data_filename("sat_00000.0000.fits")
+    # path = get_pkg_data_filename("Astrometry_tools_EOS/modified_horsehead.fits")
+    path = "Astrometry_tools_EOS/modified_horsehead.fits"
     fits_file = fits.open(path)[0]
-
     header = fits_file.header
     data = fits_file.data
 
-    star_locations = star_trak.detect_stars(data, detection_threshold=0.99, contrast=.25)
-    star_x = [lox[0] for lox in star_locations]
-    star_y = [lox[1] for lox in star_locations]
-
+    star_locations = detect_stars(data, detection_threshold=0.90, contrast=.25)
     scalar = ZScaleInterval(contrast=.25)
     scaled_data = scalar(data)
 
-    solution = star_trak.match_to_catalogue(star_locations)
+    solution = match_to_catalogue(star_locations, header, scales={1,2,3})
+    # solution = match_to_catalogue(star_locations)
+    print("Found Solution: ")
     print(solution)

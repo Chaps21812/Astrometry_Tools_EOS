@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from astropy.utils.data import get_pkg_data_filename
 from astropy.io.fits.header import Header
 from typing import Optional, Union
+from astrometry import Solution
 
-def view_fits(input_data:str, stars:Optional[list]=None, image:np.ndarray=None, print_header:bool=False, show_image:bool=True) -> tuple[Header,np.ndarray]:
+def view_fits(input_data:str, stars:Optional[list]=None, solution_stars:Solution=None, image:np.ndarray=None, print_header:bool=False, show_image:bool=True) -> tuple[Header,np.ndarray]:
     
     # Load a sample FITS file from astropy's tutorial data
     # file_path = get_pkg_data_filename(path)
@@ -38,8 +39,12 @@ def view_fits(input_data:str, stars:Optional[list]=None, image:np.ndarray=None, 
         if stars is not None:
             star_x = [lox[0] for lox in stars]
             star_y = [lox[1] for lox in stars]
-            ax_plot.plot(star_x, star_y, '.', color='r', alpha = .2)
-
+            ax_plot.plot(star_x, star_y, '.', color='r', alpha = .3)
+        if solution_stars is not None:
+            sol_star_x = [lox[0] for lox in solution_stars]
+            sol_star_y = [lox[1] for lox in solution_stars]
+            ax_plot.plot(sol_star_x, sol_star_y, '.', color='g', alpha = .3)
+            
 
         # ---- TABLE (Bottom) ----
         row_labels = [ 'Size', 'Date', 'Right Ascension', 'Declination']
