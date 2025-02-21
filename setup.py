@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='Astrometry_tools_EOS',
+    name='ML_Tools',
     version='0.1',
     packages=find_packages(),
     description='Basic tools used in EO Solutions Machine Learning Group',
