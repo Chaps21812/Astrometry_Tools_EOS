@@ -3,7 +3,7 @@ from astropy.stats import SigmaClip
 from astropy.io import fits
 import numpy as np
 
-def scale_image(path:str, bkg_subtract:bool=True, verbose:bool=False) -> np.ndarray:
+def adaptive_iqr(path:str, bkg_subtract:bool=True, verbose:bool=False) -> np.ndarray:
     '''
     Performs Log1P contrast enhancement. Searches for the highest contrast image and enhances stars.
     Optionally can perform background subtraction as well
@@ -57,4 +57,4 @@ def scale_image(path:str, bkg_subtract:bool=True, verbose:bool=False) -> np.ndar
     return best_image
 
 if __name__ == "__main__":
-    scale_image("/mnt/c/Users/david.chaparro/Documents/Repos/SatSim/output/2025-03-04T11-02-18.704584/ImageFiles/sat_00000.0000.fits", bkg_subtract=False)
+    adaptive_iqr("/mnt/c/Users/david.chaparro/Documents/Repos/SatSim/output/2025-03-04T11-02-18.704584/ImageFiles/sat_00000.0000.fits", bkg_subtract=False)

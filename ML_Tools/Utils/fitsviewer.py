@@ -156,5 +156,56 @@ def view_fits_bbox(input_data:str, center:tuple, box_size:tuple, image:np.ndarra
 
     return (header, data)
 
+def view_star_streak(input_data:str, image:np.ndarray=None):
+    """
+    Plots image of your fits file, along with optional star locations. 
+
+    Args:
+        input_data (str): Input directory for your fits file
+        stars (Optional[list]): Optinal list of stars to be plotted in red against image List (x,y) tuples
+        solution_stars (Optional[list]): Optinal list of known stars to be plotted in green against image List (x,y) tuples
+        image (np.ndarray): Optional image to display instead of default FITS image. 
+        show_header (bool): Bool to toggle showing fits header. 
+        show_image (bool): Bool to turn off showing the image. Can use to just view fits file
+
+    Returns:
+        tuple(np.ndarray, dict): Tuple of your image and your header file
+    """
+    
+    # Load a sample FITS file from astropy's tutorial data
+    # file_path = get_pkg_data_filename(path)
+    fits_file = fits.open(input_data)  # Open the FITS file
+    hdu = fits_file[0]  # Primary HDU
+    data = hdu.data
+    name = input_data.split("/")[-1]
+    overall_path = input_data.split("/ImageFiles")[0]
+    annotation_path = overall_path+"/Annotations/" + name
+    annotation_path = annotation_path.replace(".fits",".json")
+
+    with open(annotation_path) as json_data:
+        annotations = json.load(json_data)
+        json_data.close()
+
+    (annotations["data"]["objects"])
+
+    # ---- PLOT (Top) ----
+    plt.figure(figsize=(12,12))
+    plt.title('FITS Image: {}'.format(name))
+    if image is None: im = plt.imshow(data, cmap='gray', origin='lower')
+    else: im = plt.imshow(image, cmap='gray', origin='lower')
+
+    for object in annotations["data"]["objects"]:
+        if object["class_id"] == 1:
+            plt.plot(object["x_center"]*256, object["y_center"]*256, '.', color='r', alpha = .3)
+        if object["class_id"] == 2:
+            linex = [object["x_start"]*256,object["x_end"]*256]
+            liney = [object["y_start"]*256,object["y_end"]*256]
+            plt.plot(object["x_mid"]*256, object["y_mid"]*256, '.', color='g', alpha = .3)
+            plt.plot(linex,liney, '-', color='g', alpha = .3)
+            
+    # Adjust spacing between plot and table
+    plt.subplots_adjust(hspace=0.1)  # Increase hspace to move them apart
+    plt.show()
+
 if __name__ == "__main__":
     view_fits("/mnt/c/Users/david.chaparro/My Documents/Astrometry/modified_horsehead.fits")
