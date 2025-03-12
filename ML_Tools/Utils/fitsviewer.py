@@ -2,11 +2,10 @@
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
-from astropy.utils.data import get_pkg_data_filename
 from astropy.io.fits.header import Header
-from typing import Optional, Union
 from astrometry import Solution
 import matplotlib.patches as patches
+import json
 
 def view_fits(input_data:str, stars:list=None, solution_stars:Solution=None, image:np.ndarray=None, show_header:bool=False, show_image:bool=True) -> tuple[Header,np.ndarray]:
     """

@@ -5,6 +5,7 @@ import json
 import shutil
 import datetime as dt
 import uuid
+import numpy as np
 
 def compress_data(data_paths:list[str], output_zip:str) -> None:
     """
@@ -84,7 +85,7 @@ def satsim_to_coco(satsim_path:str, destination_path:str, zip:bool=False, notes:
                 json_data = json.load(f)
                 object_list = json_data["data"]["objects"]
                 data = json_data["data"]
-                image_id= uuid.uuid4().int
+                image_id= np.random.randint(0,9223372036854775806)
                 annotations = []
                 #Process all detected objects
                 for object in object_list:
@@ -108,13 +109,14 @@ def satsim_to_coco(satsim_path:str, destination_path:str, zip:bool=False, notes:
 
                     #Create coco annotation for one image
                     annotation = {
-                        "id": uuid.uuid4().int,
+                        "id": np.random.randint(0,9223372036854775806),
                         "image_id": image_id,
-                        "category_id": object["class_id"],
+                        "category_id": object["class_id"]-1,
                         "type": "bbox",
                         "centroid": [object["x_center"],object["y_center"]],
                         "bbox": [object["x_center"],object["y_center"],object["bbox_width"],object["bbox_height"]],
-                        "lines": [object["x_start"],object["y_start"],object["x_end"],object["y_end"]],
+                        "area": object["bbox_width"]*object["bbox_height"],
+                        "line": [object["x_start"],object["y_start"],object["x_end"],object["y_end"]],
                         "line_center": [object["x_mid"],object["y_mid"]],
                         "magnitude": object["magnitude"],
                         "ra":object["ra"],
@@ -134,7 +136,7 @@ def satsim_to_coco(satsim_path:str, destination_path:str, zip:bool=False, notes:
                     "alt":config_data["geometry"]["site"]["alt"],
                     "lat":config_data["geometry"]["site"]["lat"],
                     "lon":config_data["geometry"]["site"]["lon"],
-                    "file_name": data["file"]["dirname"] +"/" + data["file"]["filename"],
+                    "file_name": str(image_id)+".png",
                     "original_path": fits_file,
                     "frame_no": frame_no,
                     "date": config_data["geometry"]["time"]}
@@ -143,8 +145,8 @@ def satsim_to_coco(satsim_path:str, destination_path:str, zip:bool=False, notes:
                 path_to_annotation[fits_file] = {"annotation":annotations, "image":image, "new_id":image_id}
 
     #Compile final json information for folder
-    category1 = {"id": 1,"name": "Satellite","supercategory": "Space Object",}
-    category2 = {"id": 2,"name": "Star","supercategory": "Space Object",}
+    category1 = {"id": 1-1,"name": "Satellite","supercategory": "Space Object",}
+    category2 = {"id": 2-1,"name": "Star","supercategory": "Space Object",}
     catagories = [category1, category2]
     now = dt.datetime.now()
     info = {
